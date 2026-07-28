@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Oregon Road Trip · Aug 2–6, 2026</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+  :root{
+    --ink:#22303a;
+    --ink-soft:#54646f;
+    --ink-faint:#8595a0;
+    --paper:#f7f4ee;
+    --card:#ffffff;
+    --teal:#1d6a68;
+    --teal-dark:#134b4a;
+    --sand:#e9e1d2;
+    --rust:#c25e3d;
+    --rust-soft:#fbe9e1;
+    --pine:#3d6b4f;
+    --pine-soft:#e4efe7;
+    --sea:#2e6f8e;
+    --sea-soft:#e3eef4;
+    --gold:#a97b2f;
+    --gold-soft:#f6eeda;
+    --alert:#b3402e;
+    --alert-bg:#fdeeea;
+    --line:#e3ddd0;
+    --radius:14px;
+    --shadow:0 1px 2px rgba(34,48,58,.06), 0 6px 20px -8px rgba(34,48,58,.12);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:var(--paper); color:var(--ink); line-height:1.55;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:880px;margin:0 auto;padding:0 20px 80px}
+
+  /* ---------- Header ---------- */
+  header.hero{
+    background:linear-gradient(160deg,#134b4a 0%,#1d6a68 55%,#2e6f8e 100%);
+    color:#fff;padding:44px 20px 82px;position:relative;overflow:hidden;
+  }
+  header.hero::after{
+    content:"";position:absolute;left:0;right:0;bottom:-2px;height:46px;
+    background:var(--paper);
+    clip-path:ellipse(60% 100% at 50% 100%);
+  }
+  .hero-inner{max-width:880px;margin:0 auto}
+  .hero .kicker{font-size:12px;letter-spacing:.22em;text-transform:uppercase;opacity:.75;margin-bottom:10px}
+  .hero h1{font-size:clamp(26px,4.5vw,40px);font-weight:800;letter-spacing:-.02em;line-height:1.15}
+  .hero .sub{margin-top:10px;font-size:15px;opacity:.9;max-width:640px}
+  .hero .route{
+    margin-top:20px;display:flex;flex-wrap:wrap;gap:6px;align-items:center;
+    font-size:13px;font-weight:600;
+  }
+  .hero .route span.stop{background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.25);padding:4px 11px;border-radius:999px}
+  .hero .route span.arr{opacity:.6}
+
+  /* ---------- Day nav ---------- */
+  nav.daynav{
+    position:sticky;top:0;z-index:50;background:rgba(247,244,238,.92);
+    backdrop-filter:blur(8px);border-bottom:1px solid var(--line);
+    margin:0 -20px;padding:10px 20px;
+  }
+  .daynav-inner{max-width:880px;margin:0 auto;display:flex;gap:8px;overflow-x:auto;scrollbar-width:none}
+  .daynav-inner::-webkit-scrollbar{display:none}
+  .daynav a{
+    flex:0 0 auto;text-decoration:none;color:var(--ink-soft);font-size:13px;font-weight:600;
+    padding:7px 14px;border-radius:999px;border:1px solid var(--line);background:#fff;
+    transition:all .15s;white-space:nowrap;
+  }
+  .daynav a:hover{border-color:var(--teal);color:var(--teal)}
+  .daynav a.active{background:var(--teal);border-color:var(--teal);color:#fff}
+
+  /* ---------- Alerts ---------- */
+  .alerts{margin-top:26px}
+  .alerts h2{font-size:14px;letter-spacing:.14em;text-transform:uppercase;color:var(--alert);margin-bottom:12px;font-weight:800}
+  .alert-card{
+    background:var(--alert-bg);border:1px solid #f2cfc5;border-radius:var(--radius);
+    padding:14px 16px;margin-bottom:10px;font-size:14px;display:flex;gap:12px;
+  }
+  .alert-card .ico{flex:0 0 auto;font-size:16px;line-height:1.4}
+  .alert-card b{color:var(--alert)}
+
+  /* ---------- Day sections ---------- */
+  section.day{margin-top:44px;scroll-margin-top:70px}
+  .day-head{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;border-bottom:3px solid var(--teal);padding-bottom:10px}
+  .day-head .num{
+    background:var(--teal);color:#fff;font-weight:800;font-size:13px;letter-spacing:.06em;
+    padding:5px 12px;border-radius:8px;text-transform:uppercase;
+  }
+  .day-head h2{font-size:clamp(19px,3vw,25px);font-weight:800;letter-spacing:-.01em}
+  .day-head .date{color:var(--ink-faint);font-size:14px;font-weight:600}
+  .day-meta{
+    display:flex;flex-wrap:wrap;gap:8px;margin-top:14px;
+  }
+  .day-meta .pill{
+    font-size:12.5px;font-weight:600;color:var(--ink-soft);
+    background:#fff;border:1px solid var(--line);border-radius:999px;padding:5px 12px;
+  }
+  .day-meta .pill b{color:var(--ink)}
+
+  /* ---------- Timeline stops ---------- */
+  .stops{margin-top:20px;position:relative;padding-left:26px}
+  .stops::before{content:"";position:absolute;left:8px;top:8px;bottom:8px;width:2px;background:var(--line);border-radius:2px}
+  .stop-card{
+    position:relative;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+    box-shadow:var(--shadow);padding:16px 18px;margin-bottom:14px;
+  }
+  .stop-card::before{
+    content:"";position:absolute;left:-24px;top:22px;width:12px;height:12px;border-radius:50%;
+    background:var(--teal);border:2.5px solid var(--paper);box-shadow:0 0 0 2px var(--teal);
+  }
+  .stop-card.coffee::before{background:var(--gold);box-shadow:0 0 0 2px var(--gold)}
+  .stop-card.food::before{background:var(--rust);box-shadow:0 0 0 2px var(--rust)}
+  .stop-card.hike::before{background:var(--pine);box-shadow:0 0 0 2px var(--pine)}
+  .stop-card.stay::before{background:var(--sea);box-shadow:0 0 0 2px var(--sea)}
+  .stop-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap}
+  .stop-top h3{font-size:16.5px;font-weight:750;letter-spacing:-.01em}
+  .time{
+    display:inline-block;font-size:11.5px;font-weight:800;color:var(--teal-dark);
+    background:var(--sand);border-radius:6px;padding:2px 8px;margin-right:8px;
+    vertical-align:2px;letter-spacing:.02em;white-space:nowrap;
+  }
+  .time.opt{background:#efece4;color:var(--ink-faint)}
+  .mapnum{
+    display:inline-flex;align-items:center;justify-content:center;
+    min-width:22px;height:22px;padding:0 6px;border-radius:12px;
+    color:#fff;font-size:12px;font-weight:800;margin-right:8px;vertical-align:-4px;
+  }
+  #day1 .mapnum{background:var(--teal)}
+  #day2 .mapnum{background:var(--pine)}
+  #day3 .mapnum{background:var(--sea)}
+  #day4 .mapnum{background:var(--rust)}
+  #day5 .mapnum{background:var(--gold)}
+  .stop-top h3 .em{font-size:15px;margin-right:6px}
+  .tags{display:flex;gap:6px;flex-wrap:wrap}
+  .tag{font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:3px 9px;border-radius:999px}
+  .tag.scenic{background:var(--sea-soft);color:var(--sea)}
+  .tag.hike{background:var(--pine-soft);color:var(--pine)}
+  .tag.coffee{background:var(--gold-soft);color:var(--gold)}
+  .tag.food{background:var(--rust-soft);color:var(--rust)}
+  .tag.stay{background:#e8e6f5;color:#5b54a8}
+  .tag.must{background:var(--teal);color:#fff}
+  .tag.go{background:#eef0f3;color:#54646f;text-transform:none;letter-spacing:0;font-size:11.5px}
+  .stop-card p{font-size:14px;color:var(--ink-soft);margin-top:7px}
+  .stop-card p b{color:var(--ink)}
+  .facts{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+  .fact{
+    font-size:12px;font-weight:600;color:var(--ink-soft);background:var(--paper);
+    border:1px solid var(--line);border-radius:7px;padding:3px 9px;
+  }
+  .note{
+    margin-top:10px;font-size:13px;padding:9px 12px;border-radius:9px;
+    background:var(--gold-soft);border:1px solid #ecd9b4;color:#6d5320;
+  }
+  .note.red{background:var(--alert-bg);border-color:#f2cfc5;color:var(--alert)}
+  .note.green{background:var(--pine-soft);border-color:#c8ddce;color:#2c523c}
+
+  .drive{
+    display:flex;align-items:center;gap:10px;margin:2px 0 14px;color:var(--ink-faint);
+    font-size:12.5px;font-weight:600;letter-spacing:.02em;
+  }
+  .drive .line{flex:1;border-top:2px dashed var(--line)}
+  .drive .car{font-size:13px}
+
+  /* ---------- Option boxes / eat lists ---------- */
+  .split{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px}
+  @media(max-width:640px){.split{grid-template-columns:1fr}}
+  .mini{
+    background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:11px 13px;font-size:13.5px;
+  }
+  .mini b{display:block;font-size:13.5px;color:var(--ink);margin-bottom:2px}
+  .mini span{color:var(--ink-soft)}
+  .mini .closed{color:var(--alert);font-weight:700}
+
+  /* ---------- Map ---------- */
+  .map-panel{margin-top:26px;scroll-margin-top:70px}
+  .map-panel h2{font-size:14px;letter-spacing:.14em;text-transform:uppercase;color:var(--teal-dark);margin-bottom:12px;font-weight:800}
+  .map-chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+  .mchip{
+    border:1.5px solid var(--line);background:#fff;border-radius:999px;padding:6px 13px;
+    font-size:12.5px;font-weight:700;cursor:pointer;color:var(--ink-soft);
+    display:flex;align-items:center;gap:7px;transition:all .15s;user-select:none;
+  }
+  .mchip .dot{width:9px;height:9px;border-radius:50%}
+  .mchip.on{color:#fff}
+  .mchip[data-day="1"] .dot{background:var(--teal)} .mchip[data-day="1"].on{background:var(--teal);border-color:var(--teal)}
+  .mchip[data-day="2"] .dot{background:var(--pine)} .mchip[data-day="2"].on{background:var(--pine);border-color:var(--pine)}
+  .mchip[data-day="3"] .dot{background:var(--sea)} .mchip[data-day="3"].on{background:var(--sea);border-color:var(--sea)}
+  .mchip[data-day="4"] .dot{background:var(--rust)} .mchip[data-day="4"].on{background:var(--rust);border-color:var(--rust)}
+  .mchip[data-day="5"] .dot{background:var(--gold)} .mchip[data-day="5"].on{background:var(--gold);border-color:var(--gold)}
+  .mchip[data-day="all"].on{background:var(--ink);border-color:var(--ink)}
+  #map{
+    height:440px;border-radius:var(--radius);border:1px solid var(--line);
+    box-shadow:var(--shadow);z-index:1;
+  }
+  .map-hint{font-size:12px;color:var(--ink-faint);margin-top:8px}
+  .pin{
+    display:flex;align-items:center;justify-content:center;
+    width:26px;height:26px;border-radius:50% 50% 50% 4px;
+    color:#fff;font-size:11.5px;font-weight:800;border:2px solid #fff;
+    box-shadow:0 2px 6px rgba(0,0,0,.35);
+  }
+  .pin.stay{border-radius:8px;width:28px;height:24px;font-size:12px}
+  .leaflet-popup-content{margin:12px 14px;font-family:inherit}
+  .pp{min-width:190px;max-width:240px}
+  .pp .day{font-size:10.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;margin-bottom:3px}
+  .pp h3{font-size:14.5px;font-weight:800;letter-spacing:-.01em;color:var(--ink)}
+  .pp p{font-size:12.5px;color:var(--ink-soft);margin-top:5px;line-height:1.45}
+  .pp .flag{margin-top:6px;font-size:11.5px;font-weight:700;color:#b3402e}
+  .pp a{
+    display:inline-block;margin-top:8px;font-size:12px;font-weight:700;color:var(--teal);
+    text-decoration:none;border:1.5px solid var(--teal);border-radius:999px;padding:3px 11px;
+  }
+
+  /* ---------- Footer ---------- */
+  .foot{
+    margin-top:56px;border-top:1px solid var(--line);padding-top:20px;
+    font-size:12.5px;color:var(--ink-faint);
+  }
+  .foot h3{font-size:13px;color:var(--ink-soft);margin-bottom:8px;text-transform:uppercase;letter-spacing:.1em}
+  .foot ul{list-style:none}
+  .foot li{margin-bottom:4px}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;margin:26px 0 0;font-size:12.5px;color:var(--ink-soft);font-weight:600}
+  .legend span::before{content:"●";margin-right:6px}
+  .legend .l-scenic::before{color:var(--sea)}
+  .legend .l-hike::before{color:var(--pine)}
+  .legend .l-coffee::before{color:var(--gold)}
+  .legend .l-food::before{color:var(--rust)}
+  .legend .l-stay::before{color:#5b54a8}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="hero-inner">
+    <div class="kicker">Sun Aug 2 → Thu Aug 6 · 2026</div>
+    <h1>Oregon Coast → Cascades Road Trip</h1>
+    <div class="sub">Astoria down the coast, over the mountains to Bend, and back through the Columbia River Gorge — with scenic stops, hikes, great coffee, and vegetarian-friendly eats the whole way.</div>
+    <div class="route">
+      <span class="stop">Portland</span><span class="arr">→</span>
+      <span class="stop">Astoria</span><span class="arr">→</span>
+      <span class="stop">Garibaldi</span><span class="arr">→</span>
+      <span class="stop">Lincoln City</span><span class="arr">→</span>
+      <span class="stop">Newport</span><span class="arr">→</span>
+      <span class="stop">Bend</span><span class="arr">→</span>
+      <span class="stop">Portland ✈</span>
+    </div>
+  </div>
+</header>
+
+<nav class="daynav">
+  <div class="daynav-inner">
+    <a href="#mapsec">🗺 Map</a>
+    <a href="#alerts">⚠ Know first</a>
+    <a href="#day1">Sun · Coast Day 1</a>
+    <a href="#day2">Mon · Three Capes</a>
+    <a href="#day3">Tue · Newport → Bend</a>
+    <a href="#day4">Wed · Gorge → PDX</a>
+    <a href="#day5">Thu · Fly home</a>
+  </div>
+</nav>
+
+<div class="wrap">
+
+  <!-- ================= MAP ================= -->
+  <div class="map-panel" id="mapsec">
+    <h2>🗺 Trip map</h2>
+    <div class="map-chips" id="mapchips">
+      <div class="mchip on" data-day="all"><span>All days</span></div>
+      <div class="mchip" data-day="1"><span class="dot"></span>Sun</div>
+      <div class="mchip" data-day="2"><span class="dot"></span>Mon</div>
+      <div class="mchip" data-day="3"><span class="dot"></span>Tue</div>
+      <div class="mchip" data-day="4"><span class="dot"></span>Wed</div>
+      <div class="mchip" data-day="5"><span class="dot"></span>Thu</div>
+    </div>
+    <div id="map"></div>
+    <div class="map-hint">Numbered pins = stops in driving order · ⌂ = overnight · tap a pin for details + a Google Maps link · dashed lines are schematic, not the exact road. Map tiles need an internet connection.</div>
+  </div>
+
+  <!-- ================= ALERTS ================= -->
+  <div class="alerts" id="alerts">
+    <h2>⚠ Book / know before you go</h2>
+    <div class="alert-card"><div class="ico">🎟️</div><div>
+      <b>Multnomah Falls needs a timed permit ($2) for Wed Aug 5</b> if you park at the main I-84 Exit 31 lot between 9am–6pm. The 14-day release already happened (Jul 22) — <b>check recreation.gov now</b> for leftover slots, or grab one in the second release <b>Mon Aug 3 at 7:00am PT</b>. No-permit plan B: arrive <b>after 6pm</b> (sunset ≈ 8:30pm, gorgeous light) — that actually fits your drive perfectly.
+    </div></div>
+    <div class="alert-card"><div class="ico">🚧</div><div>
+      <b>Cape Lookout State Park closes Aug 3, 2026</b> — the exact day you drive the Three Capes loop — for a construction project. Plan around it: Cape Meares + Cape Kiwanda are open, and Cascade Head is your hike instead.
+    </div></div>
+    <div class="alert-card"><div class="ico">🚧</div><div>
+      <b>Hug Point is closed indefinitely</b> (storm damage) — Arcadia Beach, 1 mile south of Cannon Beach, is the stand-in. Ecola State Park is open again, but the Clatsop Loop's west section is closed.
+    </div></div>
+    <div class="alert-card"><div class="ico">💳</div><div>
+      <b>Fees to expect:</b> Oregon State Parks day-use went up in 2026 — $10–12/day, but <b>one daily permit is valid at all charging state parks that day</b>, so Sunday's single pass covers Ecola + Oswald West (+ Fort Stevens). Yaquina Head is $7/vehicle. Tumalo Falls is $5 or a NW Forest Pass. Blue Pool and Sahalie/Koosah are <b>free</b>.
+    </div></div>
+    <div class="alert-card"><div class="ico">🔥</div><div>
+      <b>August is fire season.</b> No closures on your routes as of late July, but re-check <b>tripcheck.com</b> before the Newport→Bend and Bend→Portland drives.
+    </div></div>
+  </div>
+
+  <!-- ================= DAY 1 ================= -->
+  <section class="day" id="day1">
+    <div class="day-head">
+      <span class="num">Day 1</span>
+      <h2>Portland → Astoria → Garibaldi</h2>
+      <span class="date">Sunday, Aug 2</span>
+    </div>
+    <div class="day-meta">
+      <span class="pill">✈ Land <b>9:30am</b> · rental car · on the road <b>~10:45</b></span>
+      <span class="pill">🚗 <b>~4 hrs</b> total driving</span>
+      <span class="pill">🌊 High tide <b>4:26pm</b></span>
+      <span class="pill">🛏 The Hotel Garibaldi</span>
+    </div>
+
+    <div class="stops">
+      <div class="drive"><span class="car">🚗</span> 10:45 · Portland → Astoria · US-30 · ~2 hrs <span class="line"></span></div>
+
+      <div class="stop-card food">
+        <div class="stop-top"><h3><span class="mapnum">2</span><span class="time">≈12:45–1:40</span><span class="em">🎪</span>Astoria Sunday Market — lunch</h3><div class="tags"><span class="tag go">🚗 2 hrs from PDX</span><span class="tag food">Veg-friendly</span><span class="tag must">Must-do</span></div></div>
+        <p>You land in Astoria on market day: 100+ vendors, live music, and food stalls filling 12th Street downtown, 10am–3pm. Graze your lunch stall-to-stall and soak up the town. (Blue Scorcher, the great vegetarian bakery, is 2 blocks away if you want a proper pastry course.)</p>
+        <div class="facts"><span class="fact">12th St, downtown</span><span class="fact">Free entry</span></div>
+      </div>
+
+      <div class="stop-card">
+        <div class="stop-top"><h3><span class="mapnum">3</span><span class="time">≈1:40–2:35</span><span class="em">🚶</span>Riverwalk stroll → Coffee Girl at Pier 39</h3><div class="tags"><span class="tag scenic">Riverfront walk</span><span class="tag coffee">Coffee</span></div></div>
+        <p>From the market, wander the flat riverfront path east under the big bridge views (~1 mi) to <b>Pier 39</b> — the old Bumble Bee tuna cannery on pilings over the Columbia. <b>Coffee Girl</b> inside is a beloved local coffeehouse where you sip espresso literally over the river (weekends 8am–3pm). Bonus: the <b>East Mooring Basin docks</b> next door are usually piled with barking sea lions. Walk back through town, or hop the 1913 Riverfront Trolley ($2 all-day, Sun 11–5).</p>
+        <div class="facts"><span class="fact">Flat, ~2 mi round trip</span><span class="fact">Free (trolley $2)</span></div>
+      </div>
+
+      <div class="stop-card">
+        <div class="stop-top"><h3><span class="mapnum">4</span><span class="time">≈2:40–3:05</span><span class="em">🗼</span>Astoria Column</h3><div class="tags"><span class="tag go">🚗 6 min</span><span class="tag scenic">Scenic</span></div></div>
+        <p>Quick drive-up on the way out of town: climb the 164-step spiral for a 360° view over the Columbia meeting the Pacific — it's the Column's 100th birthday year.</p>
+        <div class="facts"><span class="fact">Parking $10 (pass good 1 yr)</span><span class="fact">~25 min</span></div>
+      </div>
+
+      <div class="drive"><span class="car">🚗</span> 3:05 · Astoria → Ecola · ~40 min (Peter Iredale shipwreck cut to make room for the town wander) <span class="line"></span></div>
+
+      <div class="stop-card">
+        <div class="stop-top"><h3><span class="mapnum">5</span><span class="time">≈3:45–4:30</span><span class="em">🌲</span>Ecola State Park</h3><div class="tags"><span class="tag go">🚗 40 min</span><span class="tag scenic">Scenic</span><span class="tag must">Must-do</span></div></div>
+        <p>The iconic view: sea stacks, Haystack Rock, and Cannon Beach spread out below Ecola Point. Reopened in April after winter landslides. Watch for elk. Indian Beach cove is a bonus if time allows.</p>
+        <div class="facts"><span class="fact">Day-use $10–12</span><span class="fact">Narrow park road</span><span class="fact">45–90 min</span></div>
+        <div class="note">Clatsop Loop west section closed (landslide) — viewpoints unaffected.</div>
+      </div>
+
+      <div class="stop-card">
+        <div class="stop-top"><h3><span class="mapnum">6</span><span class="time">≈4:35–5:10</span><span class="em">🪨</span>Cannon Beach + Haystack Rock</h3><div class="tags"><span class="tag go">🚗 10 min → 🚶 beach</span><span class="tag scenic">Scenic</span></div></div>
+        <p>Walk the sand to the 235-ft monolith. You'll likely arrive with the tide coming in (high ~4:26pm), so it's a beach walk rather than tidepooling — still spectacular. Park at Tolovana Wayside (free) and walk north.</p>
+        <div class="facts"><span class="fact">Free</span><span class="fact">30–60 min</span></div>
+        <div class="note red">Sunday coffee trap: Sleepy Monk's cafe is permanently closed and Insomnia is closed Sundays — <b>Sea Level Bakery + Coffee</b> (3116 S Hemlock, Tolovana) is your Cannon Beach cup. Lazy Susan Cafe is the veg-friendly brunch pick if you're hungry here instead of Astoria.</div>
+      </div>
+
+      <div class="stop-card">
+        <div class="stop-top"><h3><span class="mapnum">7</span><span class="time opt">Only if ahead of schedule</span><span class="em">🏖</span>Arcadia Beach</h3><div class="tags"><span class="tag go">🚗 4 min</span><span class="tag scenic">Quick stop</span></div></div>
+        <p>Pocket beach between headlands with tilted sandstone bluffs — the stand-in for closed Hug Point, 1 mile south of Cannon Beach. Free.</p>
+        <div class="facts"><span class="fact">15–30 min</span></div>
+      </div>
+
+      <div class="stop-card hike">
+        <div class="stop-top"><h3><span class="mapnum">8</span><span class="time">≈5:25–6:10</span><span class="em">🥾</span>Oswald West · Short Sand Beach</h3><div class="tags"><span class="tag go">🚗 12 min → 🚶 ½-mi trail</span><span class="tag hike">Easy walk</span><span class="tag must">Must-do</span></div></div>
+        <p>A half-mile trail through old-growth spruce drops you into a hidden surf cove ("Shorty's"). Huge reward for ~1 mile of walking.</p>
+        <div class="facts"><span class="fact">~1 mi RT · flat</span><span class="fact">Day-use $10–12</span><span class="fact">45–60 min</span></div>
+      </div>
+
+      <div class="stop-card hike">
+        <div class="stop-top"><h3><span class="mapnum">9</span><span class="time">≈6:15–6:25</span><span class="em">⛰</span>Neahkahnie Mountain viewpoints</h3><div class="tags"><span class="tag go">🚗 5 min</span><span class="tag scenic">Scenic</span></div></div>
+        <p>Free highway pullouts 700 ft above the ocean — best roadside view of the whole stretch. (The 3-mi summit hike doesn't fit today's late start — a Willamette Week favorite if you're ever back.)</p>
+        <div class="facts"><span class="fact">Pullouts: 10 min, free</span></div>
+      </div>
+
+      <div class="stop-card food">
+        <div class="stop-top"><h3><span class="mapnum">10</span><span class="time">≈6:30–7:15</span><span class="em">🌯</span>Manzanita · Left Coast Siesta</h3><div class="tags"><span class="tag go">🚗 8 min</span><span class="tag food">Vegetarian</span></div></div>
+        <p>Beloved 30-year burrito shop with loads of veggie/vegan fillings — early dinner. <b>They close at 7pm, so order by ~6:45</b>; if you're running behind, skip straight to New Taste of India in Rockaway instead. Then a quick stroll on the 7-mile beach.</p>
+        <div class="facts"><span class="fact">288 Laneda Ave</span><span class="fact">Tue–Sun 11:30–7</span></div>
+      </div>
+
+      <div class="drive"><span class="car">🚗</span> 7:20 · Manzanita → Garibaldi · ~25 min through Rockaway Beach (Twin Rocks viewpoint) <span class="line"></span></div>
+
+      <div class="stop-card stay">
+        <div class="stop-top"><h3><span class="mapnum">⌂</span><span class="time">≈7:45</span><span class="em">🛏</span>The Hotel Garibaldi</h3><div class="tags"><span class="tag go">🚗 25 min · pier 🚶 10 min from hotel</span><span class="tag stay">Overnight</span></div></div>
+        <p>Center of town on US-101; hot breakfast buffet included tomorrow. Sunset is ≈8:45pm — stroll <b>Pier's End</b>, the historic Coast Guard boathouse pier, one of the longest wooden piers on the coast.</p>
+        <div class="split">
+          <div class="mini"><b>🍛 New Taste of India · Rockaway Beach</b><span>Best pure-vegetarian dinner bet, 8 min north. 4.6★. Call ahead to confirm hours.</span></div>
+          <div class="mini"><b>🍽 Garibaldi Portside Bistro</b><span>Top-rated in town, at the marina — veg-friendly menu; confirm Sunday hours (971-265-1091).</span></div>
+          <div class="mini"><b>🍺 Pelican Brewing · Tillamook</b><span>Reliable fallback 12 min south — open daily 11–9, pizzas/salads.</span></div>
+          <div class="mini"><b>🚂 Bonus</b><span>Oregon Coast Scenic Railroad steam train runs Garibaldi–Rockaway if you're here at the right time.</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= DAY 2 ================= -->
+  <section class="day" id="day2">
+    <div class="day-head">
+      <span class="num">Day 2</span>
+      <h2>Three Capes Loop → Lincoln City</h2>
+      <span class="date">Monday, Aug 3</span>
+    </div>
+    <div class="day-meta">
+      <span class="pill">🍳 Hotel breakfast · rolling by <b>8:45</b></span>
+      <span class="pill">🚗 <b>~2.5 hrs</b> driving (65–70 mi, slow + scenic)</span>
+      <span class="pill">🛏 Anchor Inn Resort · Taft district</span>
+    </div>
+
+    <div class="stops">
+      <div class="drive"><span class="car">🚗</span> 8:45 · Garibaldi → Tillamook · 15 min — arrive at opening, the Creamery gets slammed <span class="line"></span></div>
+
+      <div class="stop-card food">
+        <div class="stop-top"><h3><span class="mapnum">1</span><span class="time">≈9:00–10:15</span><span class="em">🧀</span>Tillamook Creamery</h3><div class="tags"><span class="tag go">🚗 15 min</span><span class="tag food">Food</span><span class="tag scenic">Attraction</span></div></div>
+        <p>Free self-guided tour, cheese samples, famous ice cream counter, and a very vegetarian-workable dining hall (fried cheese curds, grilled cheese). Open 9am–7pm.</p>
+        <div class="facts"><span class="fact">Free</span><span class="fact">45–75 min</span></div>
+        <p><b>Optional:</b> Munson Creek Falls — tallest waterfall in the Coast Range (319 ft) via a ¼-mile walk, 20 min south of town (narrow spur road) before doubling back for the capes.</p>
+      </div>
+
+      <div class="drive"><span class="car">🚗</span> 10:20 · Tillamook → Cape Meares via the reopened Loop Road · ~25 min <span class="line"></span></div>
+
+      <div class="stop-card">
+        <div class="stop-top"><h3><span class="mapnum">2</span><span class="time">≈10:45–11:45</span><span class="em">🗼</span>Cape Meares Lighthouse + Octopus Tree</h3><div class="tags"><span class="tag go">🚗 25 min → 🚶 short paths</span><span class="tag scenic">Scenic</span><span class="tag must">Must-do</span></div></div>
+        <p>Oregon's shortest lighthouse (38 ft, tours 11am–4pm), the wild many-trunked Octopus Tree (0.1-mi path), and an optional 0.8-mi old-growth spruce trail. The loop road here just reopened after a decade closed.</p>
+        <div class="facts"><span class="fact">Day-use ~$5</span><span class="fact">45–60 min</span></div>
+      </div>
+
+      <div class="stop-card coffee">
+        <div class="stop-top"><h3><span class="mapnum">3</span><span class="time">≈11:55–12:45</span><span class="em">☕</span>Oceanside · Blue Agate Cafe</h3><div class="tags"><span class="tag go">🚗 10 min</span><span class="tag coffee">Coffee</span><span class="tag food">Veg-friendly</span></div></div>
+        <p>Tiny beach town facing Three Arch Rocks — coffee or early lunch, then find the pedestrian tunnel through the headland to Tunnel Beach.</p>
+        <div class="facts"><span class="fact">Beach free</span><span class="fact">30–60 min</span></div>
+      </div>
+
+      <div class="stop-card">
+        <div class="stop-top"><h3><span class="mapnum">4</span><span class="time opt">Drive-through</span><span class="em">🚧</span>Cape Lookout — closed today</h3><div class="tags"><span class="tag go">🚗 on the loop road</span><span class="tag scenic">Heads-up</span></div></div>
+        <p>The state park's day-use area and campground close <b>today, Aug 3</b>, for construction. Enjoy the forested drive over the cape and any open highway pullouts, but don't plan on the trail — Cascade Head (below) is today's hike instead.</p>
+        <div class="note">Sandlake Rd south of here has a one-lane signal section — expect a small delay.</div>
+      </div>
+
+      <div class="stop-card">
+        <div class="stop-top"><h3><span class="mapnum">5</span><span class="time">≈1:30–3:15</span><span class="em">🏜</span>Cape Kiwanda · Pacific City</h3><div class="tags"><span class="tag go">🚗 30 min → 🚶 all walkable</span><span class="tag scenic">Scenic</span><span class="tag must">Must-do</span></div></div>
+        <p>Climb the giant dune (the workout of the day — worth it), watch dory boats launch through the surf, and see the "other" Haystack Rock offshore.</p>
+        <div class="facts"><span class="fact">County lot ~$10</span><span class="fact">1–2 hrs</span></div>
+        <div class="split">
+          <div class="mini"><b>☕ Stimulus Coffee + Bakery</b><span>Ocean-view coffee + in-house bakery, 6am–4pm. 33105 Cape Kiwanda Dr.</span></div>
+          <div class="mini"><b>🍺 Pelican Brewing · Pacific City</b><span>The PNW's only beachfront brewpub, facing the rock — veggie burger/pizzas, 11am–10pm.</span></div>
+        </div>
+      </div>
+
+      <div class="drive"><span class="car">🚗</span> 3:15 · Pacific City → Neskowin · 15 min <span class="line"></span></div>
+
+      <div class="stop-card">
+        <div class="stop-top"><h3><span class="mapnum">6</span><span class="time">≈3:30–4:00</span><span class="em">🌊</span>Neskowin + Proposal Rock</h3><div class="tags"><span class="tag go">🚗 15 min → 🚶 beach</span><span class="tag scenic">Quick stop</span></div></div>
+        <p>Quiet beach with a tree-topped sea stack you can walk to across the creek. At low tide, 2,000-year-old "ghost forest" stumps emerge from the sand.</p>
+        <div class="facts"><span class="fact">Free</span><span class="fact">20–45 min</span></div>
+      </div>
+
+      <div class="stop-card hike">
+        <div class="stop-top"><h3><span class="mapnum">7</span><span class="time">≈4:20–7:00</span><span class="em">🥾</span>Cascade Head (lower trail)</h3><div class="tags"><span class="tag go">🚗 12 min → 🚶 hike</span><span class="tag hike">Moderate hike</span><span class="tag must">Today's big hike</span></div></div>
+        <p>Nature Conservancy trail from Knight Park: ~4.5–5 mi round trip, ~1,100 ft up through forest to open headland meadows high above the Salmon River estuary — one of the best viewpoints on the Oregon coast. 2.5–3 hrs.</p>
+        <div class="facts"><span class="fact">Free</span><span class="fact">No dogs</span><span class="fact">Upper trail closed — use Knight Park TH</span></div>
+        <div class="note green">Shorter-legs alternative: Drift Creek Falls suspension bridge (3 mi RT, $5), 40 min inland from Lincoln City — also great tomorrow at sunrise.</div>
+      </div>
+
+      <div class="drive"><span class="car">🚗</span> 7:00 · Knight Park → Anchor Inn · ~15 min <span class="line"></span></div>
+
+      <div class="stop-card stay">
+        <div class="stop-top"><h3><span class="mapnum">⌂</span><span class="time">≈7:15 · dinner 7:45</span><span class="em">🛏</span>Anchor Inn Resort · Lincoln City</h3><div class="tags"><span class="tag go">🚗 15 min · beach 🚶 10 min</span><span class="tag stay">Overnight</span></div></div>
+        <p>Historic Taft district, south end of town — with its own Wheelhouse Pub & Pizza and fire pits on site. Beach access at SW 51st St (~½ mi): driftwood, and harbor seals hauled out across Siletz Bay. Keep an eye out for <b>Finders Keepers glass floats</b> hidden along the beach — finders keep them, one per household.</p>
+        <div class="split">
+          <div class="mini"><b>🍜 Thai Bay</b><span>#1 veg-friendly spot in town — Thai menus are a vegetarian's friend. Confirm Monday hours.</span></div>
+          <div class="mini"><b>🍺 Pelican Brewing · Siletz Bay</b><span>Bayfront beer garden 1 mi south, open till 10pm — closest solid dinner.</span></div>
+          <div class="mini"><b>☕ Tomorrow's coffee: Pacific Grind</b><span>2 blocks from the inn — breakfast burritos.</span></div>
+          <div class="mini"><b>🥞 Wildflower Grill</b><span>Charming veg-friendly breakfast/lunch spot north of town — Monday lunch option (closed Tuesdays).</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= DAY 3 ================= -->
+  <section class="day" id="day3">
+    <div class="day-head">
+      <span class="num">Day 3</span>
+      <h2>Newport → Blue Pool → Bend</h2>
+      <span class="date">Tuesday, Aug 4</span>
+    </div>
+    <div class="day-meta">
+      <span class="pill">☕ Pacific Grind · rolling by <b>8:00</b></span>
+      <span class="pill">🌊 Low tide ≈<b>11am</b> — tidepool window</span>
+      <span class="pill">⏰ Leave Newport by <b>~12:15</b> to fit Blue Pool</span>
+      <span class="pill">🛏 Riverhouse on the Deschutes</span>
+    </div>
+
+    <div class="stops">
+      <div class="drive"><span class="car">🚗</span> 8:00 · Lincoln City → Newport · 25 mi of great pullouts — pace yourself, the mountains are waiting <span class="line"></span></div>
+
+      <div class="stop-card">
+        <div class="stop-top"><h3><span class="mapnum">1–2</span><span class="time">≈8:15–9:00</span><span class="em">🐋</span>Boiler Bay + Depoe Bay seawall</h3><div class="tags"><span class="tag go">🚗 15 min · seawall 🚶</span><span class="tag scenic">Scenic</span></div></div>
+        <p>Boiler Bay is a 10-min clifftop pullout; then watch for spouts from the Depoe Bay seawall — resident gray whales feed close to shore all summer (staff see 5–15 a day). World's smallest harbor, too.</p>
+        <div class="facts"><span class="fact">Free</span><span class="fact">30–50 min combined</span></div>
+        <div class="note">The Whale Watching Center building is closed Tuesdays — the seawall itself is the show anyway.</div>
+      </div>
+
+      <div class="stop-card">
+        <div class="stop-top"><h3><span class="mapnum">3–4</span><span class="time">≈9:10–9:50</span><span class="em">🌀</span>Otter Crest Loop → Devils Punchbowl</h3><div class="tags"><span class="tag go">🚗 scenic loop drive</span><span class="tag scenic">Scenic</span></div></div>
+        <p>Take the one-way southbound old highway loop past Cape Foulweather (500 ft above the surf), ending near Devils Punchbowl — a collapsed sea cave that churns at high tide.</p>
+        <div class="facts"><span class="fact">Free</span><span class="fact">40–60 min</span></div>
+      </div>
+
+      <div class="stop-card">
+        <div class="stop-top"><h3><span class="mapnum">5</span><span class="time">≈10:00–11:30</span><span class="em">🗼</span>Yaquina Head + tidepools</h3><div class="tags"><span class="tag go">🚗 15 min → 🚶 to pools</span><span class="tag scenic">Scenic</span><span class="tag must">Must-do</span></div></div>
+        <p>Oregon's tallest lighthouse (1873) on a basalt headland — and your <b>tidepool moment</b>: low tide hits ≈11am, prime time for the Cobble Beach pools (sea stars, anemones, urchins) with harbor seals on the rocks offshore. Tower stairs are closed for restoration, but pools + grounds are the draw. Sturdy shoes — the cobbles are slick.</p>
+        <div class="facts"><span class="fact">$7/vehicle</span><span class="fact">Verify tide time day-of</span></div>
+      </div>
+
+      <div class="stop-card food">
+        <div class="stop-top"><h3><span class="mapnum">6</span><span class="time">≈11:40–12:15</span><span class="em">🥪</span>Nye Beach lunch · Newport</h3><div class="tags"><span class="tag go">🚗 10 min</span><span class="tag food">Veg-friendly</span><span class="tag coffee">Coffee</span></div></div>
+        <p><b>Cafe Stephanie</b> (daily 8–2, omelets + veggie sandwiches) or <b>Panini Bakery</b> for coffee + veg paninis, in Newport's walkable beach-arts district. Keep it quick — the mountains are calling.</p>
+        <div class="facts"><span class="fact">NW Coast St</span></div>
+        <div class="note green">On your way out of town, a 5-min detour to <b>Port Dock One on the Bayfront</b>: wild sea lions piled on the docks, barking their heads off. Free, right by the US-20 turnoff.</div>
+      </div>
+
+      <div class="drive"><span class="car">🚗</span> 12:15 · Newport → Santiam Junction · US-20 east through Corvallis + Sweet Home · ~2¾ hrs — then a 12-mi spur south on OR-126 stacks all the water stops <span class="line"></span></div>
+
+      <div class="stop-card">
+        <div class="stop-top"><h3><span class="mapnum">7</span><span class="time">≈3:05–3:35</span><span class="em">🏞</span>Clear Lake</h3><div class="tags"><span class="tag go">🚗 2¾ hrs</span><span class="tag scenic">Scenic</span></div></div>
+        <p>First stop on the spur: the headwaters of the McKenzie — impossibly clear water with a 3,000-year-old sunken forest visible below the surface. Walk the lakeshore near the resort, or grab a rowboat if you're somehow ahead of schedule.</p>
+        <div class="facts"><span class="fact">2 min off OR-126</span><span class="fact">~30 min</span></div>
+      </div>
+
+      <div class="stop-card">
+        <div class="stop-top"><h3><span class="mapnum">8</span><span class="time">≈3:40–4:20</span><span class="em">💦</span>Sahalie & Koosah Falls</h3><div class="tags"><span class="tag go">🚗 5 min · falls linked by 🚶 0.4-mi path</span><span class="tag scenic">Waterfalls</span><span class="tag must">Must-do</span></div></div>
+        <p>Two thundering McKenzie River falls with paved lots right off the highway — Sahalie is 50 yards from the car, the easiest big payoff of the trip. A 2.6-mi loop links both if your legs want it.</p>
+        <div class="facts"><span class="fact">Free</span><span class="fact">20–60 min</span></div>
+      </div>
+
+      <div class="stop-card hike">
+        <div class="stop-top"><h3><span class="mapnum">9</span><span class="time">≈4:35–6:35</span><span class="em">🔵</span>Tamolitch Blue Pool</h3><div class="tags"><span class="tag go">🚗 12 min → 🚶 4-mi hike</span><span class="tag hike">Hike · 4 mi RT</span><span class="tag must">The blue hole!</span></div></div>
+        <p>The McKenzie River emerges from underground lava into an unreal glowing turquoise pool. ~4 mi round trip, gentle (~285 ft), from the Trail Bridge Reservoir trailhead (FR 730). Tuesday afternoon is a decent crowd window.</p>
+        <div class="facts"><span class="fact">Free · no permit</span><span class="fact">~2 hrs</span><span class="fact">Vault toilet, no water</span></div>
+        <div class="note red">Look, don't swim: the water is 37°F year-round and cliff-jumping here has killed people. It's a viewpoint-from-the-rim kind of place.</div>
+      </div>
+
+      <div class="drive"><span class="car">🚗</span> 6:35 · Blue Pool → Bend · back to US-20 over Santiam Pass, through Sisters · ~1 hr 20 (don't worry — your Sisters Coffee stop is tomorrow morning, when they're open) <span class="line"></span></div>
+
+      <div class="stop-card stay">
+        <div class="stop-top"><h3><span class="mapnum">⌂</span><span class="time">≈7:55 · dinner 8:15</span><span class="em">🛏</span>Riverhouse on the Deschutes · Bend</h3><div class="tags"><span class="tag go">🚗 1 hr 20 · dinner 🚗 5 min</span><span class="tag stay">Overnight</span></div></div>
+        <p>Right on the river, 5 min from downtown. Dinner lands ~8:15 — Spork seats until 9, but <b>book Wild Rose ahead</b> if you want a sure thing. <b>If you have gas left in the tank:</b> drive up <b>Pilot Butte</b> (5 min away) for a 360° sunset panorama of the whole Cascade range — sunset ≈8:15pm.</p>
+        <div class="split">
+          <div class="mini"><b>🍚 Spork</b><span>Bend's favorite — global street food with serious veg options (spicy peanut party rice bowl). Mon–Sat 11–9.</span></div>
+          <div class="mini"><b>🍜 Wild Rose Northern Thai</b><span>Downtown; book a table ahead (Tock/OpenTable) for a summer Tuesday.</span></div>
+          <div class="mini"><b>🌱 Lively Up Yourself</b><span>All-vegan comfort food, close to the Riverhouse.</span></div>
+          <div class="mini"><b>🌮 Toasty</b><span>Plant-based food truck (Nacho Crunchwrap) if you roll in casual.</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= DAY 4 ================= -->
+  <section class="day" id="day4">
+    <div class="day-head">
+      <span class="num">Day 4</span>
+      <h2>Tumalo Falls → the Gorge → Portland</h2>
+      <span class="date">Wednesday, Aug 5</span>
+    </div>
+    <div class="day-meta">
+      <span class="pill">💦 Tumalo at <b>7:30</b> · ☕ Sisters at <b>9:35</b></span>
+      <span class="pill">🚗 <b>~4¾ hrs</b> driving via Sisters + The Dalles</span>
+      <span class="pill">🎟 Multnomah after <b>6pm</b> = no permit</span>
+      <span class="pill">🛏 Portland — downtown/east side</span>
+    </div>
+
+    <div class="stops">
+      <div class="stop-card hike">
+        <div class="stop-top"><h3><span class="mapnum">1</span><span class="time">≈7:30–9:00</span><span class="em">💦</span>Tumalo Falls — first thing</h3><div class="tags"><span class="tag go">🚗 30 min from hotel → 🚶 viewpoint</span><span class="tag hike">Easy–moderate</span><span class="tag must">Must-do</span></div></div>
+        <p>Leave the hotel ~7:00. 97-ft waterfall 30 min west of downtown (last 3 miles gravel, fine for cars). The lower viewpoint is steps from the lot; the upper is a half-mile up; keen legs can continue 2 mi round trip to Double Falls. The early start beats the tiny lot — reviewers' #1 complaint.</p>
+        <div class="facts"><span class="fact">$5 or NW Forest Pass</span><span class="fact">1–1.5 hrs</span><span class="fact">No dogs</span></div>
+      </div>
+
+      <div class="drive"><span class="car">🚗</span> 9:05 · Tumalo Falls → Sisters via Tumalo/US-20 · ~30 min <span class="line"></span></div>
+
+      <div class="stop-card coffee">
+        <div class="stop-top"><h3><span class="mapnum">2</span><span class="time">≈9:35–10:15</span><span class="em">☕</span>Sisters Coffee Co. · Sisters</h3><div class="tags"><span class="tag go">🚗 30 min</span><span class="tag coffee">Coffee</span><span class="tag must">Must-do</span></div></div>
+        <p>One of Oregon's best roasters, in a big lodge-style flagship in the western-storefront town of Sisters — coffee <b>and</b> breakfast. From here take OR-126 to Redmond and rejoin US-97 north; it only adds ~25 min to the day.</p>
+        <div class="facts"><span class="fact">273 W Hood Ave</span><span class="fact">Opens 6am</span></div>
+      </div>
+
+      <div class="drive"><span class="car">🚗</span> 10:15 · Sisters → Redmond → US-97 north <span class="line"></span></div>
+
+      <div class="stop-card">
+        <div class="stop-top"><h3><span class="mapnum">3–4</span><span class="time">≈10:45–12:35</span><span class="em">🏜</span>High desert leg</h3><div class="tags"><span class="tag go">🚗 30 min to first stop</span><span class="tag scenic">Scenic</span></div></div>
+        <p><b>Peter Skene Ogden viewpoint</b> (free pullout over the Crooked River gorge) and, if you're moving well, a quick <b>Smith Rock</b> overlook near Terrebonne (~$5). Then US-197 drops dramatically into the Deschutes canyon at <b>Maupin</b> (~12:15) — a good leg-stretch in rafting country.</p>
+      </div>
+
+      <div class="drive"><span class="car">🚗</span> 12:35 · Maupin → The Dalles → I-84 west into the Gorge <span class="line"></span></div>
+
+      <div class="stop-card">
+        <div class="stop-top"><h3><span class="mapnum">5–6</span><span class="time">≈1:30–3:15</span><span class="em">🌾</span>Rowena Crest + Hood River</h3><div class="tags"><span class="tag go">🚗 55 min · town 🚶 walkable</span><span class="tag scenic">Scenic</span><span class="tag food">Lunch</span></div></div>
+        <p>Exit at Rowena (~1:30) for the famous horseshoe-loop overlook on the old highway, rejoin I-84 at Mosier, then late lunch in <b>Hood River</b> (~2:00–3:15) — a fun, walkable windsurf town with plenty of veg-friendly spots.</p>
+        <div class="facts"><span class="fact">Rowena: free, 30 min</span></div>
+      </div>
+
+      <div class="stop-card">
+        <div class="stop-top"><h3><span class="mapnum">7–10</span><span class="time">≈3:45–6:00</span><span class="em">🌊</span>Waterfall Corridor · Historic Hwy 30</h3><div class="tags"><span class="tag go">🚗 30 min · short 🚶 at each falls</span><span class="tag scenic">Scenic</span><span class="tag must">Must-do</span></div></div>
+        <p>Exit 35 (Ainsworth), then west on the just-fully-reopened historic highway: <b>Horsetail Falls</b> (roadside), Oneonta Gorge, <b>Wahkeena</b>, Bridal Veil, <b>Latourell</b>, and finish climbing to <b>Vista House at Crown Point</b> (~5:30) for the classic Gorge panorama. Save Multnomah itself for last (pin 8) — the timing below is the trick.</p>
+        <div class="facts"><span class="fact">Free · no corridor permit in 2026</span><span class="fact">Vehicles under 35 ft</span></div>
+      </div>
+
+      <div class="stop-card">
+        <div class="stop-top"><h3><span class="mapnum">8</span><span class="time">≈6:15–7:30</span><span class="em">🎟</span>Multnomah Falls</h3><div class="tags"><span class="tag go">🚗 15 min back east → 🚶 paved path</span><span class="tag scenic">The double waterfall</span><span class="tag must">Headliner</span></div></div>
+        <p>Oregon's 620-ft two-tier icon. Walk up to <b>Benson Bridge</b> (paved, 5 min) between the tiers; the switchback trail to the top is 2.4 mi round trip / 600 ft if you want to earn dinner.</p>
+        <div class="facts"><span class="fact">After 6pm: no permit needed</span><span class="fact">Sunset ≈ 8:30pm</span></div>
+        <div class="note green">These timings land you at the I-84 lot just after 6pm — <b>no permit needed, golden-hour light, thinner crowds</b>. Backup: a 3–5pm timed slot ($2, recreation.gov, second release <b>Aug 3 at 7am PT</b>) if you'd rather go earlier. Lodge restrooms are under renovation — portable toilets on site.</div>
+      </div>
+
+      <div class="drive"><span class="car">🚗</span> 7:30 · Multnomah Falls → downtown Portland · ~30 min <span class="line"></span></div>
+
+      <div class="stop-card stay">
+        <div class="stop-top"><h3><span class="mapnum">⌂</span><span class="time">≈8:00</span><span class="em">🛏</span>Portland overnight — pick your vibe</h3><div class="tags"><span class="tag go">🚗 30 min</span><span class="tag stay">Overnight · TBD</span></div></div>
+        <p>Fun, central, and easy for PDX in the morning — east side is closest to the airport:</p>
+        <div class="split">
+          <div class="mini"><b>The Hoxton · Old Town · ~$110–180</b><span>Design-y, rooftop taco bar, Deadstock Coffee in the lobby. ~20 min to PDX.</span></div>
+          <div class="mini"><b>Hotel Grand Stark · Central Eastside · ~$95–190</b><span>Boutique in a 1908 building, surrounded by restaurants/bars. ~15–20 min to PDX.</span></div>
+          <div class="mini"><b>Jupiter NEXT · E Burnside · ~$145–290</b><span>Modern art-hotel with Hey Love bar; free parking + EV. Closest to PDX.</span></div>
+          <div class="mini"><b>Woodlark · Downtown · ~$130–285</b><span>Elegant historic option with a great bar (Abigail Hall). The Nines (~$260+) is the splurge.</span></div>
+        </div>
+        <div class="note red">Heads-up: the Ace Hotel is now "The Clyde" and Kimpton Monaco is long gone — don't trust old lists.</div>
+      </div>
+
+      <div class="stop-card food">
+        <div class="stop-top"><h3><span class="time">≈8:45</span><span class="em">🍽</span>Portland dinner + evening</h3><div class="tags"><span class="tag go">🚶 or 5-min 🚗 from most hotels</span><span class="tag food">Vegetarian</span></div></div>
+        <div class="split">
+          <div class="mini"><b>Kachka</b><span>Famous Russian zakuski with a dedicated vegetarian feast option — book OpenTable now. SE 11th Ave.</span></div>
+          <div class="mini"><b>Oma's Hideaway</b><span>Playful Indonesian-Malaysian on SE Division, great veg options.</span></div>
+          <div class="mini"><b>Harlow</b><span>Entirely vegetarian/vegan bowls + big plates (closes earlier — check hours).</span></div>
+          <div class="mini"><b>Dove Vivi / Lovely's Fifty Fifty</b><span>Cornmeal-crust pizza · wood-fired pizza + homemade ice cream.</span></div>
+        </div>
+        <p style="margin-top:10px"><b>Nightcap:</b> Salt & Straw ice cream (tons of vegan flavors) or Powell's City of Books, open till 9pm.</p>
+        <div class="note red">Skip old recs: Farm Spirit, Fermenter, No Bones Beach Club, and Sweet Hereafter are all closed.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= DAY 5 ================= -->
+  <section class="day" id="day5">
+    <div class="day-head">
+      <span class="num">Day 5</span>
+      <h2>Coffee + fly home</h2>
+      <span class="date">Thursday, Aug 6</span>
+    </div>
+    <div class="day-meta">
+      <span class="pill">✈ Flight <b>5:00pm</b> — the morning is yours</span>
+      <span class="pill">🚗 Leave for PDX by <b>~2:15</b></span>
+    </div>
+
+    <div class="stops">
+      <div class="stop-card coffee">
+        <div class="stop-top"><h3><span class="mapnum">1</span><span class="time">≈8:30–9:30</span><span class="em">☕</span>One last great cup + breakfast</h3><div class="tags"><span class="tag go">🚶/🚗 5–10 min from hotel</span><span class="tag coffee">Coffee</span></div></div>
+        <div class="split">
+          <div class="mini"><b>Coava · SE Grand</b><span>Flagship roastery-cafe, on the east side (airport-ward). Downtown location closed.</span></div>
+          <div class="mini"><b>Heart · E Burnside</b><span>Open 7am; the downtown cafe closed, this is the one.</span></div>
+          <div class="mini"><b>Berlu Bakery · SE Belmont</b><span>Vietnamese pastries from a former tasting-menu star — special send-off (check open days).</span></div>
+          <div class="mini"><b>Stumptown · in PDX airport</b><span>Backup plan lives at the terminal.</span></div>
+        </div>
+      </div>
+
+      <div class="stop-card">
+        <div class="stop-top"><h3><span class="mapnum">2</span><span class="time">≈9:45–11:15</span><span class="em">🌹</span>International Rose Test Garden</h3><div class="tags"><span class="tag go">🚗 15 min</span><span class="tag scenic">Scenic</span><span class="tag must">Must-do</span></div></div>
+        <p>Free, in full August bloom, terraced into Washington Park's hillside with the city skyline and Mt. Hood framed behind — one last classic Portland view before you fly.</p>
+        <div class="facts"><span class="fact">400 SW Kingston Ave</span><span class="fact">Free · paid parking</span></div>
+      </div>
+
+      <div class="stop-card">
+        <div class="stop-top"><h3><span class="mapnum">3</span><span class="time">≈11:30–1:45</span><span class="em">📚</span>Powell's + easy lunch</h3><div class="tags"><span class="tag go">🚗 10 min → 🚶 Pearl District</span><span class="tag scenic">Wander</span><span class="tag food">Veg-friendly</span></div></div>
+        <p>Anything you missed last night: Powell's City of Books (opens 10am), a Pearl District wander, and a relaxed lunch — Harlow (all-vegetarian) or one of the food cart pods both work before the drive.</p>
+      </div>
+
+      <div class="stop-card">
+        <div class="stop-top"><h3><span class="mapnum">⌂</span><span class="time">Leave ~2:15</span><span class="em">✈</span>PDX departure · 5:00pm flight</h3><div class="tags"><span class="tag go">🚗 25 min (40 in traffic)</span><span class="tag stay">Logistics</span></div></div>
+        <p>~25 min drive (allow 40 with traffic). Rental returns are all at the on-airport Rental Car Center (7240 NE Airport Way) — follow "Rental Car Return" signs; short connection to the terminal. At the counter by ~3:00 = comfortable for a 5pm flight.</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="legend">
+    <span class="l-scenic">Scenic stop</span>
+    <span class="l-hike">Hike / walk</span>
+    <span class="l-coffee">Coffee</span>
+    <span class="l-food">Food (veg-friendly)</span>
+    <span class="l-stay">Stay / logistics</span>
+  </div>
+
+  <div class="foot">
+    <h3>Quick reference</h3>
+    <ul>
+      <li><b>Multnomah permit:</b> recreation.gov → "Multnomah Falls Timed Use Permit" → Aug 5 slot ($2). Second release Mon Aug 3, 7:00am PT.</li>
+      <li><b>Passes worth buying day 1:</b> an Oregon State Parks day-use permit each day you need it ($10–12), or the $60–75 annual if you'd use it later. NW Forest Pass / $5 covers Tumalo Falls.</li>
+      <li><b>Road conditions:</b> tripcheck.com — check before Tue and Wed drives (fire season).</li>
+      <li><b>Tides (for tidepools + ghost forest):</b> NOAA tide predictions, Garibaldi/Newport stations. Tue Aug 4 low tide ≈11am — your Yaquina Head tidepool window. Verify day-of.</li>
+      <li><b>Numbers on cards = pins on the map</b> (colors match the day). ⌂ = overnight stop.</li>
+      <li>Verified late July 2026 — hours can shift; call ahead for small-town restaurants (noted where iffy).</li>
+    </ul>
+  </div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+const DAY_COLORS = {1:'#1d6a68',2:'#3d6b4f',3:'#2e6f8e',4:'#c25e3d',5:'#a97b2f'};
+const DAY_NAMES = {
+  1:'Day 1 · Sun Aug 2 — Portland → Astoria → Garibaldi',
+  2:'Day 2 · Mon Aug 3 — Three Capes → Lincoln City',
+  3:'Day 3 · Tue Aug 4 — Newport → Blue Pool → Bend',
+  4:'Day 4 · Wed Aug 5 — Tumalo → the Gorge → Portland',
+  5:'Day 5 · Thu Aug 6 — Coffee → PDX'
+};
+// [day, order, lat, lng, name, note, type('stop'|'stay'), flag?]
+const STOPS = [
+  [1,1, 45.5152,-122.6784,'Portland — start','Land 9:30, rental car, on the road ~10:45. US-30 northwest along the Columbia, ~2 hrs to Astoria.','stop'],
+  [1,2, 46.1879,-123.8309,'Astoria Sunday Market — lunch','≈12:45–1:40. 100+ vendors, live music, food stalls on 12th St (10am–3pm). Graze lunch + wander town.','stop'],
+  [1,3, 46.1922,-123.8090,'Riverwalk → Coffee Girl · Pier 39','≈1:40–2:35. Walk the riverfront ~1 mi east to the old cannery on pilings — espresso over the river + sea lions on the East Mooring Basin docks. Trolley $2 back.','stop'],
+  [1,4, 46.1816,-123.8181,'Astoria Column','≈2:40–3:05. Quick drive-up: 164-step spiral, 360° views. Parking $10.','stop'],
+  [1,5, 45.9197,-123.9740,'Ecola State Park','≈3:45–4:30. THE Cannon Beach viewpoint — sea stacks + Haystack panorama. Day-use $10–12.','stop','Clatsop Loop west section closed'],
+  [1,6, 45.8846,-123.9686,'Cannon Beach · Haystack Rock','≈4:35–5:10. Walk the sand to the 235-ft rock. Free — park at Tolovana Wayside. Coffee: Sea Level Bakery.','stop'],
+  [1,7, 45.8618,-123.9599,'Arcadia Beach','Only if ahead of schedule. Pocket beach — the sub for closed Hug Point. Free.','stop'],
+  [1,8, 45.7592,-123.9576,'Oswald West · Short Sand Beach','≈5:25–6:10. Half-mile old-growth trail to a hidden surf cove. Day-use $10–12.','stop'],
+  [1,9, 45.7410,-123.9610,'Neahkahnie viewpoints','≈6:15–6:25. Free pullouts 700 ft over the ocean — best roadside view of the stretch.','stop'],
+  [1,10,45.7184,-123.9345,'Manzanita · Left Coast Siesta','≈6:30–7:15 dinner. Veggie-loaded burritos — closes 7pm, order by 6:45! Fallback: New Taste of India, Rockaway.','stop'],
+  [1,11,45.5599,-123.9110,'The Hotel Garibaldi ⌂','Arrive ≈7:45. Sunset ≈8:45 at Pier’s End boathouse pier. Dinner: Portside Bistro or New Taste of India (Rockaway).','stay'],
+  [2,1, 45.4837,-123.8443,'Tillamook Creamery','≈9:00–10:15 — arrive at opening. Free tour, cheese samples, famous ice cream.','stop'],
+  [2,2, 45.4863,-123.9776,'Cape Meares Lighthouse','≈10:45–11:45. Oregon’s shortest lighthouse + the Octopus Tree. ~$5 day-use.','stop'],
+  [2,3, 45.4599,-123.9700,'Oceanside','≈11:55–12:45 lunch at Blue Agate Cafe. Three Arch Rocks views; tunnel to Tunnel Beach.','stop'],
+  [2,4, 45.3620,-123.9700,'Cape Lookout (drive-by)','State park closes TODAY (Aug 3) for construction — enjoy the forested drive, skip the trail.','stop','Closed Aug 3, 2026'],
+  [2,5, 45.2170,-123.9720,'Cape Kiwanda · Pacific City','≈1:30–3:15. Climb the giant dune; Haystack Rock #2. Stimulus Coffee + beachfront Pelican Brewing. Lot ~$10.','stop'],
+  [2,6, 45.1041,-123.9840,'Neskowin · Proposal Rock','≈3:30–4:00. Tree-topped sea stack across the creek; ghost-forest stumps at low tide. Free.','stop'],
+  [2,7, 45.0409,-123.9878,'Cascade Head hike · Knight Park','≈4:20–7:00. Today’s big hike: ~4.5–5 mi RT, ~1,100 ft, headland meadows. Free, no dogs.','stop'],
+  [2,8, 44.9366,-124.0157,'Anchor Inn Resort ⌂','Arrive ≈7:15, dinner 7:45 — Thai Bay or Pelican Siletz Bay. Beach at SW 51st: seals + glass-float hunting.','stay'],
+  [3,1, 44.8290,-124.0630,'Boiler Bay','≈8:15. Clifftop pullout — surf, seabirds, whale spouts. Free.','stop'],
+  [3,2, 44.8080,-124.0630,'Depoe Bay seawall','≈8:35–9:00. Resident gray whales feed close to shore all summer.','stop'],
+  [3,3, 44.7737,-124.0740,'Otter Crest Loop · Cape Foulweather','≈9:10. One-way scenic old highway, 500 ft above the surf.','stop'],
+  [3,4, 44.7480,-124.0645,'Devils Punchbowl','≈9:30–9:50. Collapsed sea cave that churns at high tide.','stop'],
+  [3,5, 44.6767,-124.0790,'Yaquina Head + tidepools','≈10:00–11:30. Oregon’s tallest lighthouse — and the tidepool stop: low tide ≈11am, prime for Cobble Beach pools. $7/vehicle.','stop'],
+  [3,6, 44.6435,-124.0620,'Nye Beach lunch · Newport','≈11:40–12:15. Cafe Stephanie or Panini Bakery. On the way out: 5-min stop at Port Dock One for the wild sea lion pile-up. Leave by 12:15!','stop'],
+  [3,7, 44.3697,-121.9927,'Clear Lake','≈3:05–3:35. McKenzie headwaters — crystal water over a 3,000-yr-old sunken forest. 2 min off OR-126.','stop'],
+  [3,8, 44.3496,-121.9963,'Sahalie & Koosah Falls','≈3:40–4:20. Two thundering falls steps from the car. Free.','stop'],
+  [3,9, 44.2716,-122.0468,'Tamolitch Blue Pool trailhead','≈4:35–6:35. The blue hole! ~4 mi RT, gentle, to the glowing turquoise pool. Free.','stop','Look, don’t swim — 37°F water'],
+  [3,10,44.0872,-121.3100,'Riverhouse on the Deschutes ⌂','Arrive ≈7:55, dinner 8:15 — Spork or Wild Rose Thai (book ahead). Bonus: Pilot Butte sunset drive-up.','stay'],
+  [4,1, 44.0335,-121.5665,'Tumalo Falls — first thing','≈7:30–9:00. 97-ft falls; viewpoint steps from the lot. $5 or NW Forest Pass. Small lot — early!','stop'],
+  [4,2, 44.2909,-121.5493,'Sisters Coffee Co. · Sisters','≈9:35–10:15. One of Oregon’s best roasters — coffee + breakfast in a lodge-style flagship. 273 W Hood Ave.','stop'],
+  [4,3, 44.3921,-121.1900,'Peter Skene Ogden viewpoint','≈10:45–11:15. Free pullout over the Crooked River gorge (optional Smith Rock overlook nearby).','stop'],
+  [4,4, 45.1754,-121.0808,'Maupin · Deschutes canyon','≈12:15. US-197 drops into rafting country — good leg-stretch.','stop'],
+  [4,5, 45.6826,-121.3033,'Rowena Crest','≈1:30. The famous horseshoe-loop overlook on the old highway. Free.','stop'],
+  [4,6, 45.7095,-121.5150,'Hood River','≈2:00–3:15. Late lunch in the walkable windsurf town.','stop'],
+  [4,7, 45.5900,-122.0680,'Horsetail Falls','≈3:45. Start of the waterfall corridor — roadside falls on Historic Hwy 30.','stop'],
+  [4,8, 45.5762,-122.1158,'Multnomah Falls ★','≈6:15–7:30 — after 6pm no permit needed, golden-hour light. Benson Bridge 5-min walk; top of falls 2.4 mi RT.','stop','Before 6pm: $2 permit — recreation.gov, release Aug 3 7am PT'],
+  [4,9, 45.5757,-122.1279,'Wahkeena + Bridal Veil + Latourell','≈4:15–5:15. More corridor falls heading west on Hwy 30.','stop'],
+  [4,10,45.5395,-122.2440,'Vista House · Crown Point','≈5:30. Classic Gorge panorama to finish the corridor — then double back to Multnomah after 6.','stop'],
+  [4,11,45.5202,-122.6742,'Portland overnight ⌂','Arrive ≈8:00, dinner 8:45 — Kachka, Oma’s Hideaway, Harlow. Salt & Straw or Powell’s (till 9) after.','stay'],
+  [5,1, 45.5099,-122.6635,'Coava Coffee · SE Grand','≈8:30–9:30. Last great cup (or Heart on E Burnside / Berlu Bakery on SE Belmont).','stop'],
+  [5,2, 45.5191,-122.7084,'International Rose Test Garden','≈9:45–11:15. Free, in full August bloom, city + Mt Hood views from Washington Park.','stop'],
+  [5,3, 45.5231,-122.6812,'Powell’s + lunch','≈11:30–1:45. Powell’s City of Books, Pearl wander, veg lunch (Harlow or food carts).','stop'],
+  [5,4, 45.5887,-122.5975,'PDX ✈ 5:00pm flight','Leave downtown ~2:15; Rental Car Center at 7240 NE Airport Way; at the counter by ~3:00.','stay'],
+];
+
+const map = L.map('map');
+L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{
+  maxZoom:18, attribution:'&copy; OpenStreetMap contributors'
+}).addTo(map);
+
+const dayLayers = {}, dayBounds = {};
+for (const day of [1,2,3,4,5]) {
+  const group = L.layerGroup();
+  const pts = STOPS.filter(s=>s[0]===day).sort((a,b)=>a[1]-b[1]);
+  L.polyline(pts.map(s=>[s[2],s[3]]), {color:DAY_COLORS[day], weight:2.5, dashArray:'6 7', opacity:.75}).addTo(group);
+  for (const s of pts) {
+    const [d,order,lat,lng,name,note,type,flag] = s;
+    const isStay = type==='stay';
+    const icon = L.divIcon({
+      className:'',
+      html:`<div class="pin ${isStay?'stay':''}" style="background:${DAY_COLORS[d]}">${isStay?'⌂':order}</div>`,
+      iconSize:[26,26], iconAnchor:[13,24], popupAnchor:[0,-22]
+    });
+    const gmap = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+    const html = `<div class="pp">
+      <div class="day" style="color:${DAY_COLORS[d]}">${DAY_NAMES[d]}</div>
+      <h3>${name}</h3><p>${note}</p>
+      ${flag?`<div class="flag">⚠ ${flag}</div>`:''}
+      <a href="${gmap}" target="_blank" rel="noopener">Open in Google Maps →</a>
+    </div>`;
+    L.marker([lat,lng],{icon}).bindPopup(html).addTo(group);
+  }
+  dayLayers[day]=group;
+  dayBounds[day]=L.latLngBounds(pts.map(s=>[s[2],s[3]]));
+  group.addTo(map);
+}
+const allBounds = L.latLngBounds(STOPS.map(s=>[s[2],s[3]]));
+map.fitBounds(allBounds.pad(0.06));
+
+document.getElementById('mapchips').addEventListener('click',e=>{
+  const chip=e.target.closest('.mchip'); if(!chip) return;
+  document.querySelectorAll('.mchip').forEach(c=>c.classList.remove('on'));
+  chip.classList.add('on');
+  const sel=chip.dataset.day;
+  for (const day of [1,2,3,4,5]) {
+    if (sel==='all' || String(day)===sel) dayLayers[day].addTo(map);
+    else map.removeLayer(dayLayers[day]);
+  }
+  map.fitBounds((sel==='all'?allBounds:dayBounds[sel]).pad(0.08));
+});
+
+  // Highlight active day in nav while scrolling
+  const links=[...document.querySelectorAll('.daynav a')];
+  const targets=links.map(a=>document.querySelector(a.getAttribute('href')));
+  const onScroll=()=>{
+    let idx=0;
+    targets.forEach((t,i)=>{ if(t && t.getBoundingClientRect().top<120) idx=i; });
+    links.forEach((a,i)=>a.classList.toggle('active',i===idx));
+  };
+  document.addEventListener('scroll',onScroll,{passive:true});
+  onScroll();
+</script>
+</body>
+</html>
